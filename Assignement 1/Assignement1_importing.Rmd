@@ -1,0 +1,148 @@
+---
+title: "Assignment for R - Part 1: Data Import from Diverse Sources"
+author: "Rita U. Kayitana"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# One-time installation (run these in the Console, NOT inside the Rmd):
+# install.packages(c("haven", "DBI", "RMariaDB", "odbc", "jsonlite"))
+
+library(haven)      # Stata, SAS, SPSS files
+library(DBI)        # standard database interface
+library(RMariaDB)   # MySQL / MariaDB driver
+library(odbc)       # ODBC driver interface (Microsoft Access)
+library(jsonlite)   # JSON from web APIs
+
+# Folder containing the datasets (change here only if the location changes)
+data_dir <- "C:/Users/USER/OneDrive/Desktop/Datasets imported in R"
+```
+
+# Introduction
+
+In data science and analytics, data comes in different forms. Analysts must know how to bring data from different sources, such as statistical software, database management systems and web APIs, and how to work with built-in datasets in R.
+
+This document demonstrates how R imports data from different environments.
+
+Packages used:
+
+- **haven**: reads files from other statistical packages (Stata, SAS, SPSS).
+- **DBI, RMariaDB and odbc**: connect R to database management systems such as MySQL and Microsoft Access.
+- **jsonlite**: brings in live data from the internet through web APIs.
+- **Base R** (`read.csv`, `read.table`): reads structured text files.
+
+# 1. Importing from Statistical Packages
+
+## A. Stata data (.dta)
+
+This dataset contains daily air quality measurements taken in New York City during May 1973.
+
+```{r stata}
+stata_data <- read_dta(file.path(data_dir, "session saved in stata.dta"))
+names(stata_data)    # column names
+head(stata_data)     # first 6 rows
+dim(stata_data)      # rows and columns
+```
+
+## B. SAS data (.sas7bdat)
+
+This dataset is a weekly panel for a skin and hair care product line, tracked across distribution centers.
+
+```{r sas}
+sas_data <- read_sas(file.path(data_dir, "DCSKINPRODUCT.sas7bdat"))
+head(sas_data)
+str(sas_data)        # data types and structure
+```
+
+## C. CSV files
+
+This dataset contains information such as names and locations of customers of a business.
+
+```{r csv}
+csv_data <- read.csv(file.path(data_dir, "customers.csv"))
+head(csv_data)       # first rows
+names(csv_data)      # variable names
+```
+
+# 2. Importing from Database Management Systems (DBMS)
+
+## A. MySQL
+
+The database contains several tables, such as the employee table and the assignment table. If your MySQL user has a password, add it with `password = "your_password"` in `dbConnect()`.
+
+```{r mysql}
+con_mysql <- dbConnect(RMariaDB::MariaDB(),
+                       host = "localhost",
+                       dbname = "wpdbase",
+                       user = "root")
+
+dbListTables(con_mysql)                          # all tables in the database
+dbListFields(con_mysql, "employee")              # fields in the 'employee' table
+employees <- dbReadTable(con_mysql, "employee")  # read the whole table
+head(employees)
+```
+
+Querying specific rows with SQL: only the people working in the IT department.
+
+```{r mysql-query}
+IT_people <- dbGetQuery(con_mysql, "
+    SELECT FirstName, LastName, Position
+    FROM employee
+    WHERE Department = 'IT'
+")
+IT_people
+```
+
+```{r mysql-close}
+dbDisconnect(con_mysql)
+```
+
+## B. Microsoft Access (.accdb)
+
+This database contains 6 students and their scores in class. The Access driver must match your R version (64-bit R needs the 64-bit Access driver).
+
+```{r access}
+con_access <- dbConnect(
+  odbc::odbc(),
+  .connection_string = paste0(
+    "Driver={Microsoft Access Driver (*.mdb, *.accdb)};",
+    "Dbq=C:/Users/USER/OneDrive/Documents/database to export to R.accdb;"
+  )
+)
+
+students <- dbReadTable(con_access, "students")   # import the table
+dbDisconnect(con_access)
+
+head(students)
+mean(students$Height)                             # mean height
+```
+
+# 3. Importing Data from Web APIs
+
+The Cat Facts API returns interesting facts about cats (behaviour, night vision, hearing, etc.).
+
+```{r api}
+api_url   <- "https://catfact.ninja/facts"   # API endpoint
+cat_data  <- fromJSON(api_url)               # fetch and parse JSON
+facts_df  <- cat_data$data                   # extract the data frame
+head(facts_df)
+```
+
+# 4. Using Built-in Datasets
+
+R ships with datasets you can work with immediately. `iris` describes plants and their features.
+
+```{r iris}
+data("iris")
+variable.names(iris)
+```
+
+Mean and standard deviation of petal length by species using `by()`:
+
+```{r iris-by}
+by(iris$Petal.Length, iris$Species, mean)   # mean petal length per species
+by(iris$Petal.Length, iris$Species, sd)     # standard deviation per species
+```

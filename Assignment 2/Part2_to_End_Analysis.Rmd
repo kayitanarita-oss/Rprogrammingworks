@@ -1,0 +1,247 @@
+---
+title: "Assignment for R - Part 2 : Exploration, Management, Visualization and Regression"
+author: "Rita U. Kayitana"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+
+# install.packages(c("haven", "DBI", "RMariaDB", "odbc"))
+
+library(haven)
+library(DBI)
+library(RMariaDB)
+library(odbc)
+
+# Folder containing the datasets 
+data_dir <- "C:/Users/USER/OneDrive/Desktop/Datasets imported in R"
+```
+
+# Loading the Data Used in This Document
+
+This Part use data from three sources imported in Part 1: the Stata file, the MySQL `employee` table and the Access `students` table. 
+
+```{r load-data}
+# Stata file (air quality data, contains missing values in Ozone)
+stata_data <- read_dta(file.path(data_dir, "session saved in stata.dta"))
+
+# MySQL: employee table
+con_mysql <- dbConnect(RMariaDB::MariaDB(),
+                       host = "localhost",
+                       dbname = "wpdbase",
+                       user = "root")      # add password = "..." if you have one
+employees <- dbReadTable(con_mysql, "employee")
+dbDisconnect(con_mysql)
+
+# Microsoft Access: students table
+con_access <- dbConnect(
+  odbc::odbc(),
+  .connection_string = paste0(
+    "Driver={Microsoft Access Driver (*.mdb, *.accdb)};",
+    "Dbq=C:/Users/USER/OneDrive/Documents/database to export to R.accdb;"
+  )
+)
+students <- dbReadTable(con_access, "students")
+dbDisconnect(con_access)
+
+data("iris")
+```
+
+# Part 2: Exploring and Analysing Datasets
+
+This part calculates descriptive statistics, examines distributions, checks data types and runs cross-tabulations to detect underlying trends or anomalies.
+
+## 1. General Summaries and Inspection
+
+Using the `students` dataset imported from the Access database:
+
+```{r inspect}
+str(students)              # structure and data types (6 observations, 7 variables)
+names(students)            # variable names
+students$StudentNames      # only the student names column
+students[3:6, ]            # rows 3 to 6, all columns
+students[4:6, -c(3, 5, 6)] # rows 4 to 6, dropping columns 3, 5 and 6
+```
+
+Descriptive statistics, and applying an operation across columns
+
+```{r summaries}
+summary(students)                                   # min, quartiles, median, mean, max
+sd(students$studentage)                             # standard deviation of student age
+apply(students[, c("Weight", "Height")], 2, mean)   # column-wise means
+```
+
+Mean and standard deviation for a specific species in the `iris` dataset:
+
+```{r iris-stats}
+mean(iris$Petal.Length[iris$Species == "virginica"])
+sd(iris$Sepal.Length[iris$Species == "setosa"])
+```
+
+## 2. Cross-Tabulation
+
+The built-in `UCBAdmissions` dataset shows female and male admission decisions at a university.
+
+```{r crosstab}
+ucba <- data.frame(UCBAdmissions)
+
+# Contingency table: admission decision by gender, with frequencies
+(cross <- xtabs(Freq ~ Gender + Admit, data = ucba))
+
+# Row proportions: admission and rejection rates by gender
+prop.table(cross, 1)
+```
+
+# Part 3: Data Management and Transformation
+
+Data management is everything you do to organise, clean and prepare data so it is accurate, consistent and ready to analyse. Examples include sorting, filtering, handling missing values and creating new variables.
+
+## 1. Sorting, Selecting and Filtering
+
+This section uses the `employees` data imported from MySQL.
+
+Sorting rows by last name in alphabetical order:
+
+```{r sorting}
+sorted_employees <- employees[order(employees$LastName), ]
+head(sorted_employees)
+```
+
+Selecting specific columns: each employee with their supervisor.
+
+```{r selecting}
+names(employees)
+selected_vars <- c("FirstName", "Supervisor")
+(employee_supervisor <- employees[selected_vars])
+```
+
+Filtering rows: employees and their departments where the supervisor number is 3.
+
+```{r filtering}
+employees
+supervisor3 <- subset(employees, Supervisor == 3,
+                      select = c(LastName, Department))
+supervisor3
+```
+
+## 2. Handling Missing Values
+
+You may choose to delete observations with missing values or replace them with the average. The `stata_data` imported from Stata has missing (`NA`) values in the `Ozone` variable. Here they are replaced with the column mean.
+
+```{r missing}
+cleaned_stata_data <- stata_data                             # copy of the original
+ozone_mean <- mean(stata_data$Ozone, na.rm = TRUE)           # mean ignoring NAs
+cleaned_stata_data$Ozone[is.na(stata_data$Ozone)] <- ozone_mean
+
+sum(is.na(stata_data$Ozone))          # NA values in the original data
+sum(is.na(cleaned_stata_data$Ozone))  # NA values remaining after cleaning
+head(cleaned_stata_data)              # first rows of the cleaned data
+```
+
+## 3. Creating Categories
+
+Using `iris`, sepal length is grouped into Small (below 5.5), Medium (5.5 to below 6.5) and Large (6.5 and above).
+
+```{r categories}
+iris_cat <- iris
+iris_cat$SepalCat[iris_cat$Sepal.Length < 5.5] <- "Small"
+iris_cat$SepalCat[iris_cat$Sepal.Length >= 5.5 & iris_cat$Sepal.Length < 6.5] <- "Medium"
+iris_cat$SepalCat[iris_cat$Sepal.Length >= 6.5] <- "Large"
+
+head(iris_cat)
+table(iris_cat$SepalCat)       # frequency of each category
+```
+
+## 4. Creating a New Variable (BMI)
+
+BMI = weight / height squared. This assumes Weight is in kg and Height is in cm (so height is divided by 100 to convert to metres). It uses the `students` dataset.
+
+```{r bmi}
+BMI <- round(students$Weight / (students$Height / 100)^2, digits = 2)
+students_bmi <- cbind(students, BMI)    # combine with the original data frame
+head(students_bmi)
+```
+
+# Part 4: Data Visualization
+
+Plots reveal distributions and relationships. Linear models quantify those relationships.
+
+## Box-and-Whisker Plot (categorical vs. quantitative variable)
+
+The boxplot compares sepal length across the three iris species. Setosa has the shortest sepals, versicolor is in the middle, and virginica has the longest.
+
+```{r boxplot}
+boxplot(Sepal.Length ~ Species, data = iris,
+        main = "Comparison of Sepal Length across Species",
+        xlab = "Species", ylab = "Sepal Length (cm)",
+        col = c("lightblue", "lightgreen", "lightpink"))
+```
+
+## Bar Plot (distribution)
+
+The bar chart shows how many employees work in each department, so you can see how staff are distributed across the organisation. It uses the `employees` table.
+
+```{r barplot}
+barplot(table(employees$Department),
+        main = "Employees per Department",
+        xlab = "Department", ylab = "Count",
+        col = "steelblue", las = 2)
+```
+
+## Scatter Plot: Students' Height vs. Weight
+
+The plot shows whether taller students also tend to weigh more. Dots rising from left to right mean a positive relationship; no clear direction means a weak or no relationship.
+
+```{r scatter}
+plot(students$Height, students$Weight,
+     main = "Height vs Weight",
+     xlab = "Height", ylab = "Weight", pch = 19)
+```
+
+## Scatter Plot with Linear Regression Line and Lowess Curve
+
+The red line is the linear regression fit and the blue line is the lowess smoothed curve. If the two lines are close, the relationship is roughly linear. If the blue curve bends away from the red line, it is not.
+
+```{r scatter-fit}
+plot(Weight ~ Height, data = students,
+     main = "Height vs Weight with Fitted Lines", pch = 19)
+abline(lm(Weight ~ Height, data = students), col = "red", lwd = 2)
+lines(lowess(students$Height, students$Weight), col = "blue", lwd = 2)
+legend("topleft", legend = c("Linear fit", "Lowess"),
+       col = c("red", "blue"), lwd = 2, bty = "n")
+```
+
+# Part 5: Fitting a Linear Regression Model and Correlation Coefficient
+
+```{r lm}
+students_lm <- lm(Weight ~ Height, data = students)
+summary(students_lm)
+```
+
+## Correlation coefficient
+
+```{r cor}
+cor(students$Height, students$Weight)
+```
+
+## Interpretation
+
+The model predicts weight from height.
+
+- **Intercept** (`r round(coef(students_lm)[1], 3)`): the predicted weight when height is zero.
+- **Height coefficient** (`r round(coef(students_lm)[2], 3)`): weight changes by about `r round(coef(students_lm)[2], 2)` units for each one-unit increase in height.
+- **Correlation** (`r round(cor(students$Height, students$Weight), 3)`): the correlation ranges from -1 to +1. A value this close to +1 indicates a strong positive relationship, while a value near 0 would indicate a weak one.
+
+# Conclusion
+
+This assignment showed how R can:
+
+- Import data from statistical software, databases, web APIs and built-in datasets.
+- Explore it with summaries, descriptive statistics and cross-tabulations.
+- Clean and transform it by sorting, filtering, handling missing values and creating new variables.
+- Visualize it with box plots, bar plots and scatter plots, and model relationships with linear regression.
+
+Together, these steps form the basic workflow for any data analysis project.
