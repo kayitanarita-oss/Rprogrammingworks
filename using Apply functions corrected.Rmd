@@ -1,0 +1,116 @@
+---
+title: "Using the Apply functions"
+author: "Rita.U.Kayitana"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+
+1. APPLY FUNCTION 
+
+apply() Used primarily for matrices or data frames. It allows you to apply a function across rows (MARGIN = 1) or down columns (MARGIN = 2).
+
+```{r}
+# Create a simple matrix with 3 rows and 3 columns
+my_matrix <- matrix(c(1, 2, 3, 4, 5, 6, 7, 8, 9), nrow = 3, ncol = 3)
+
+# Print the matrix to see its layout
+print("Original Matrix:")
+print(my_matrix)
+
+# Calculate the mean (average) for EACH COLUMN (MARGIN = 2)
+# Margin 2 means "look across columns"
+col_means <- apply(my_matrix, MARGIN = 2, FUN = mean)
+
+# Print the column means result
+print("Mean of each column:")
+print(col_means)
+
+# Calculate the sum for EACH ROW (MARGIN = 1)
+# Margin 1 means "look across rows"
+row_sums <- apply(my_matrix, MARGIN = 1, FUN = sum)
+
+# Print the row sums result
+print("Sum of each row:")
+print(row_sums)
+``` 
+
+#2. The lapply() Function
+
+What it does: Stands for List Apply. It takes a list (or a data frame, which R treats like a list of columns), applies a function to every single element, and always returns the output as a list.
+
+```{r}
+# Create a list containing two different numeric vectors
+my_list <- list(
+  group_A = c(10, 20, 30, 40),
+  group_B = c(5, 15, 25, 35)
+)
+
+# Use lapply to find the square root of every number in each list element
+# 'sqrt' is the function being applied to each item inside my_list
+sqrt_list <- lapply(my_list, sqrt)
+
+# Print the resulting list
+print("Square roots returned as a list:")
+print(sqrt_list)
+
+# Check the data type of the output (it will be a "list")
+print(class(sqrt_list))
+
+```
+
+#3. The sapply() Function
+What it does: Stands for Simplified Apply. It works exactly like lapply(), but instead of returning a list, it tries to simplify the result into a clean vector, matrix, or table if possible, making it much easier to read and work with
+
+```{r}
+# Use the same list from the previous example
+my_list <- list(
+  group_A = c(10, 20, 30, 40),
+  group_B = c(5, 15, 25, 35)
+)
+
+# Use sapply to calculate the mean of each vector in the list
+mean_vector <- sapply(my_list, mean)
+
+# Print the simplified result
+print("Means returned as a simplified vector (not a list):")
+print(mean_vector)
+
+# Check the data type of the output (it will be a numeric vector)
+print(class(mean_vector))
+
+```
+
+#4. The tapply() Function
+What it does: Stands for Table Apply. It allows you to apply a function to subsets of a vector, grouped by one or more categorical variables (factors). This is very useful for calculating group statistics (like average salary by department, or average mpg by car cylinders).We will use the built-in 'mtcars' dataset
+Let's find the average miles per gallon ('mpg') grouped by the number of cylinders ('cyl')
+ 
+
+```{r}
+avg_mpg_by_cyl <- tapply(mtcars$mpg, mtcars$cyl, mean)
+
+# Print the grouped results
+print("Average Miles Per Gallon grouped by Number of Cylinders:")
+print(avg_mpg_by_cyl)
+
+```
+#5. The mapply() Function
+What it does: Stands for Multivariate Apply. While lapply and sapply work on a single list or vector, mapply is a vectorized version that can accept multiple lists or vectors at the same time and apply a function across them in parallel.
+
+```{r}
+# Create two separate numeric vectors of equal length
+vector1 <- c(1, 2, 3, 4)
+vector2 <- c(10, 20, 30, 40)
+
+# Use mapply to add the corresponding elements together:
+# 1st execution: 1 + 10
+# 2nd execution: 2 + 20, and so on...
+# '+' is the function, and vector1, vector2 are the inputs
+added_result <- mapply(function(x, y) { x + y }, vector1, vector2)
+
+# Print the resulting vector
+print("Result of adding two vectors element-by-element using mapply:")
+print(added_result)
+
+```
