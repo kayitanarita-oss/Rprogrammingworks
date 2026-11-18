@@ -1,0 +1,136 @@
+---
+title: "ggplot2 practise work"
+author: "Rita.U.Kayitana"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# GGPLOT2 PRACTICE SCRIPT
+
+# 1. Load the required library
+install.packages("ggplot2")
+
+library(ggplot2)
+
+load the dataset(used a built-in)
+
+```{r}
+data(mtcars)
+names(mtcars)
+```
+
+# 2. Histogram (geom_histogram) - Shows distribution of a single number variable
+It tells you how common different fuel efficiencies are. For example, you can see which MPG ranges have the most cars and whether the data is clustered or spread out.
+
+```{r}  
+library(ggplot2)
+ggplot(mtcars, aes(x = mpg)) +
+  geom_histogram(binwidth = 2, fill = "steelblue", color = "white") +
+  labs(title = "1. Histogram of Miles Per Gallon")
+```
+
+# 3. Bar Chart (geom_bar) - Counts frequencies of a category
+
+```{r}
+table(mtcars$cyl)   #ilustrating individual counts in each cylinder
+```
+
+now graphically
+
+
+```{r}
+ggplot(mtcars, aes(x = factor(cyl))) +
+  geom_bar(fill = "orange") +
+  labs(title = "2. Bar Chart of Cylinder Counts", x = "Cylinders")
+```
+
+
+
+# 4. Boxplot (geom_boxplot) - Compares numerical spread across categories.
+shows the median, spread (quartiles), and potential outliers of MPG broken down by each cylinder group.
+For instance, you can easily see that cars with fewer cylinders tend to have a higher median MPG than cars with more cylinders.
+
+```{r}
+ggplot(mtcars, aes(x = factor(cyl), y = mpg, fill = factor(cyl))) +
+  geom_boxplot() +
+  labs(title = "3. Boxplot of MPG by Cylinders", x = "Cylinders", y = "MPG")
+
+```
+
+# 5. Density Plot (geom_density) - Smooth distribution curve
+Smooth, flowing colored curves representing the probability distribution of MPG across cylinder types.
+it shows where the data values are concentrated. 
+
+```{r}
+ggplot(mtcars, aes(x = mpg, fill = factor(cyl))) +
+  geom_density(alpha = 0.4) +
+  labs(title = "4. Density Plot of MPG")
+
+```
+# 6. Scatter Plot / Points (geom_point) - Relationship between two numbers
+you can see a negative relationship as the weight of the car increases, the miles per gallon (fuel efficiency) goes down.
+
+```{r}
+
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point(color = "green", size = 3) +
+  labs(title = "5. Scatter Plot (Weight vs MPG)")
+
+```
+
+
+# 8. Line Plot (geom_line) - Connects points (useful for trends)
+it traces how MPG changes smoothly as car weight increases step-by-step.
+
+```{r}
+mtcars_sorted <- mtcars[order(mtcars$wt), ]  # Sort data by weight first
+mtcars_sorted
+
+ggplot(mtcars_sorted, aes(x = wt, y = mpg)) +
+  geom_line(color = "blue", linewidth = 1) +
+  labs(title = "7. Line Plot of Sorted Weight vs MPG")
+
+```
+
+# 9. Violin Plot (geom_violin) - Combines boxplot and density shape
+It combines a boxplot and a density plot, showing both the summary statistics and the exact shape or concentration of the data distribution at different levels.
+
+```{r}
+
+ggplot(mtcars, aes(x = factor(cyl), y = mpg, fill = factor(cyl))) +
+  geom_violin(alpha = 0.6) +
+  labs(title = "8. Violin Plot of MPG by Cylinders")
+  
+```
+
+# 10. Horizontal and Vertical Reference Lines (geom_hline & geom_vline)
+These lines split the plot into quadrants based on the averages, making it easy to see which data points fall above or below the overall dataset means.
+
+
+```{r}
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point(color = "black") +
+  geom_hline(yintercept = mean(mtcars$mpg), color = "red", linetype = "dashed") +
+  geom_vline(xintercept = mean(mtcars$wt), color = "blue", linetype = "dashed") +
+  labs(title = "9. Scatter Plot with Mean Reference Lines")
+
+```
+#dashed red line representing the average MPG and a vertical dashed blue line representing the average weight.
+
+
+# 11. Text Labels (geom_text) - Adds text directly onto data points
+A scatter plot where each point is labeled with the name of the car.
+
+It allows you to identify specific individual observations, making it easy to spot named outliers or extreme data points directly on the chart.
+
+```{r}
+mtcars_subset <- head(mtcars, 10) # just the first 10 rows for clarity
+mtcars_subset$car_name <- rownames(mtcars_subset)
+ggplot(mtcars_subset, aes(x = wt, y = mpg, label = car_name)) +
+  geom_point(color = "orange", size = 3) +
+  geom_text(vjust = -0.5, size = 3) +
+  labs(title = "10. Plot with Text Labels")
+
+```
+
+
