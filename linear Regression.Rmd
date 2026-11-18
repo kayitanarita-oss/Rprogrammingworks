@@ -1,0 +1,102 @@
+---
+title: "Linear regression"
+author: "Rita.U.Kayitana"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+INTRODUCTION
+
+Multiple linear regression is a statistical method used to model the relationship between a single continuous dependent variable (Y) and two or more independent predictor variables (X), allowing us to estimate how changes in predictors impact the outcome while holding other variables constant. Beyond looking at coefficients, you must always verify Ordinary Least Squares (OLS) assumptions such as linearity, homoscedasticity, and the absence of severe multicollinearity among predictors because violating these assumptions can bias standard errors and invalidate hypothesis tests.
+
+Dependent Variable (Y): mpg (Miles per US Gallon) Fuel economy.
+Independent Variables (X_1, X_2, X_3):Engine power(hp), Vehicle weight(wt) and Acceleration speed(qsec).
+
+Step 1: Load and inspect the dataset
+
+```{r}
+data(mtcars)
+head(mtcars)
+str(mtcars)
+```
+Count missing values across columns
+```{r}
+colSums(is.na(mtcars))
+sum(is.na(mtcars))                               #there are no missing values
+```
+
+Step 2: Fit the Multiple Linear Regression Model
+
+Model Equation: mpg = beta_0 + beta_1*(hp) + beta_2*(wt) + beta_3*(qsec) + epsilon
+
+```{r}
+model <- lm(mpg ~ hp + wt + qsec, data = mtcars)  # Fits OLS regression predicting mpg using hp, wt, and qsec
+```
+Step 3: Summary output of the model
+```{r}
+model_summary <- summary(model)    # Computes and stores the full statistical summary table of the model
+print(model_summary)               # Prints the summary table showing coefficients, t-values, p-values, and R-squared
+
+# Extract coefficient table 
+coef_table <- as.data.frame(model_summary$coefficients)
+colnames(coef_table) <- c("Estimate", "Std. Error", "t value", "p value")
+knitr::kable(round(coef_table, 4), caption = "Multiple Regression Coefficients")
+```
+
+Intercept  = 27.61 predicted mpg when all predictors equal zero.
+Horsepower (hp = -0.018$): Each 1-unit increase in horsepower decreases fuel economy by 0.018 mpg.
+Weight (wt = -4.358): Each 1,000 lb increase in vehicle weight decreases fuel economy by 4.358 mpg.
+qsec = 0.511: Each 1-second increase in acceleration time increases fuel economy by 0.511 mpg
+
+
+Step 4: Extract Key Metrics for Interpretation
+
+```{r}
+
+# Step 4: Extract Key Metrics for Interpretation
+summary(model)$r.squared       # Prints the R-squared value
+summary(model)$adj.r.squared   # Prints the Adjusted R-squared value
+
+```
+
+R^2 = 0.835:Measures goodness of fit. It indicates that 83.5% of the total variance in fuel economy (mpg) is jointly explained by horsepower, weight, and quarter-mile time.
+
+
+$H_0: \beta_1 = \beta_2 = \beta_3 = 0$   null hypothesis
+
+$H_1: \text{At least one } \beta_i \neq 0$   alternative hypothesis
+
+```{r}
+# Extract F-statistic and calculate overall model p-value
+f_stat <- model_summary$fstatistic
+f_p_val <- pf(f_stat[1], f_stat[2], f_stat[3], lower.tail = FALSE)
+
+cat("F-statistic:", round(f_stat[1], 4), "with p-value:", format.pval(f_p_val))
+
+```
+
+
+Step 5: Residual Diagnostics Plots
+
+
+```{r}
+# Set up a 1x2 grid layout for the most critical diagnostic plots
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+
+# 1. Residuals vs. Fitted (checks linearity and constant error variance)
+plot(model, which = 1)
+
+# 2. Normal Q-Q Plot (checks if residuals are normally distributed)
+plot(model, which = 2)
+
+# Reset the plotting layout and margins back to normal
+par(mfrow = c(1, 1), mar = c(5, 4, 4, 2) + 0.1)
+
+```
+
+CONCLUSION
+Using the built-in mtcars dataset, we successfully fitted a multiple linear regression model explaining vehicle fuel efficiency using horsepower, weight, and acceleration time. The model achieved an $R^2$ of 0.835, demonstrating explanatory power, with vehicle weight standing out as the primary statistically significant determinant of fuel consumption.
+
+
+
+
